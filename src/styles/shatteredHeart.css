@@ -1,0 +1,59 @@
+.shattered-root {
+  position: relative;
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.shattered-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.shattered-slot {
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.shard-preview {
+  position: absolute;
+  right: 0;
+  bottom: -8px;
+  width: 220px;
+  background: rgba(0, 0, 0, 0.32);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 12px;
+  padding: 10px;
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.32);
+  backdrop-filter: blur(8px);
+  display: grid;
+  gap: 6px;
+}
+
+.shard-preview-media {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: 10px;
+  background-size: cover;
+  background-position: center;
+}
+
+.shard-preview-title {
+  color: #e8edf7;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+@media (max-width: 960px) {
+  .shattered-root {
+    max-width: 520px;
+  }
+}
+
+@media (max-width: 768px) {
+  .shattered-svg {
+    display: none;
+  }
+}
