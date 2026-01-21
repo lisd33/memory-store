@@ -28,18 +28,6 @@
           <div id="code">
             <font color="#FF0000">
               <span class="say">亲爱的宝宝，我爱你</span><br />
-              <span class="say"> 我知道我不会甜言蜜语，</span><br />
-              <span class="say"> 但是我会用行动证明一切</span><br />
-              <span class="say">你说我啰嗦，</span><br />
-              <span class="say"> 有些东西因为越在乎所以越怕失去</span><br />
-              <span class="say">因为我太爱你了，所以我害怕失去你</span><br />
-              <span class="say">因为我太爱你了，所以我对你总啰嗦</span><br />
-              <span class="say">希望可以执子之手，与子偕老</span><br />
-              <span class="say">如果上天让我许三个愿望，</span><br />
-              <span class="say">第一个是今生今世和你在一起， </span><br />
-              <span class="say"> 第二个是再生再世和你在一起，</span><br />
-              <span class="say">第三个是永生永世和你不分离 </span><br />
-              <span class="say"><span class="space"></span> -- 爱你的老公</span>
             </font>
             <br />
             <br />
@@ -63,9 +51,14 @@
           return false;
         }
 
+        var logicW = 1100,
+          logicH = 680;
+        var width = logicW;
+        var height = logicH;
+
         var opts = {
           seed: {
-            x: 0,
+            x: logicW / 2 - 20,
             color: 'rgb(190, 26, 37)',
             scale: 2,
           },
@@ -109,92 +102,112 @@
         };
 
         function resizeScene() {
-          var ratio = 680 / 1100;
           var vw = $(window).width();
           var vh = $(window).height();
-          var isMobile = vw < 600;
+          var scale = Math.min((vw - 16) / logicW, (vh - 16) / logicH, 1);
+          if (scale < 0.2) scale = 0.2;
+          var targetW = Math.round(logicW * scale);
+          var targetH = Math.round(logicH * scale);
 
-          // 移动端使用更激进的缩放
-          if (isMobile) {
-            var targetW = Math.min(vw * 0.95, 360);
-            var targetH = targetW * ratio;
+          $('#wrap').css({
+            width: targetW + 'px',
+            height: targetH + 'px',
+          });
+          canvas.css({
+            width: targetW + 'px',
+            height: targetH + 'px',
+          });
 
-            $('#wrap').css({
-              width: targetW + 'px',
-              height: targetH + 'px',
-            });
-            canvas.css({
-              width: targetW + 'px',
-              height: targetH + 'px',
-            });
-            canvas.attr('width', targetW);
-            canvas.attr('height', targetH);
+          // 逻辑分辨率保持不变，绘制按 1100x680，CSS 等比缩放
+          canvas.attr('width', logicW);
+          canvas.attr('height', logicH);
 
-            opts.seed.x = targetW / 2 - 10;
-            opts.bloom.width = targetW - 10;
-            opts.bloom.height = targetH - 20;
-
-            // 调整文字大小
-            $('#code').css('font-size', '12px');
-            $('#clock-box').css('font-size', '10px');
-          } else {
-            var targetW = Math.min(vw * 0.98, 1100);
-            var targetH = Math.min(vh * 0.9, targetW * ratio);
-            targetW = Math.min(targetW, targetH / ratio);
-
-            $('#wrap').css({
-              width: targetW + 'px',
-              height: targetH + 'px',
-            });
-            canvas.css({
-              width: targetW + 'px',
-              height: targetH + 'px',
-            });
-            canvas.attr('width', targetW);
-            canvas.attr('height', targetH);
-
-            opts.seed.x = targetW / 2 - 20;
-            opts.bloom.width = targetW - 20;
-            opts.bloom.height = targetH - 30;
-
-            // 恢复文字大小
-            $('#code').css('font-size', '');
-            $('#clock-box').css('font-size', '');
-          }
+          // 同步文字字号（位置保持原始，字体放大）
+          const overlayScale = Math.max(targetW / logicW, 0.6);
+          const fontScale = Math.min(Math.max(overlayScale, 1) * 0.95, 1.3);
+          const textBase = {
+            left: 188,
+            top: 80,
+            clockLeft: 60,
+            clockTop: 550,
+            codeSize: 16,
+            clockSize: 20,
+            digitSize: 48,
+          };
+          $('#text').css({
+            left: textBase.left * overlayScale + 'px',
+            top: textBase.top * overlayScale + 'px',
+            transform: 'none',
+            transformOrigin: 'top left',
+            'pointer-events': 'none',
+          });
+          $('#code').css('font-size', textBase.codeSize * fontScale + 'px');
+          $('#clock-box').css({
+            left: textBase.clockLeft * overlayScale + 'px',
+            top: textBase.clockTop * overlayScale + 'px',
+            transform: 'none',
+            transformOrigin: 'top left',
+            'font-size': textBase.clockSize * fontScale + 'px',
+            'pointer-events': 'none',
+          });
+          $('#clock .digit').css('font-size', textBase.digitSize * fontScale + 'px');
         }
 
         resizeScene();
         $(window).on('resize', resizeScene);
 
-        var width = canvas.attr('width');
-        var height = canvas.attr('height');
-
         var tree = new Tree(canvas[0], width, height, opts);
         var seed = tree.seed;
         var foot = tree.footer;
         var hold = 1;
+        var allowExit = false;
+
+        // 点击任意处（含移动端触摸）通知父页面关闭开场动画
+        $(window).on('click touchstart', function () {
+          if (!allowExit) return;
+          if (window.parent) {
+            window.parent.postMessage({ type: 'LOVE_INTRO_EXIT' }, '*');
+          }
+        });
+
+        // 将事件坐标从 CSS 尺寸换算到 canvas 逻辑坐标
+        const toLogical = (clientX, clientY) => {
+          const rect = canvas[0].getBoundingClientRect();
+          const cssX = clientX - rect.left;
+          const cssY = clientY - rect.top;
+          const scaleX = canvas[0].width / rect.width;
+          const scaleY = canvas[0].height / rect.height;
+          return { x: cssX * scaleX, y: cssY * scaleY };
+        };
+
+        const isSmallScreen = window.matchMedia('(max-width: 640px)').matches;
 
         canvas
           .click(function (e) {
-            var offset = canvas.offset(),
-              x,
-              y;
-            x = e.pageX - offset.left;
-            y = e.pageY - offset.top;
-            if (seed.hover(x, y)) {
+            const pos = toLogical(e.pageX, e.pageY);
+            if (seed.hover(pos.x, pos.y) || isSmallScreen) {
               hold = 0;
-              canvas.unbind('click');
-              canvas.unbind('mousemove');
+              canvas.off('click');
+              canvas.off('touchstart');
+              canvas.off('mousemove');
+              canvas.removeClass('hand');
+            }
+          })
+          .on('touchstart', function (e) {
+            const touch = e.originalEvent.touches[0];
+            if (!touch) return;
+            const pos = toLogical(touch.pageX, touch.pageY);
+            if (seed.hover(pos.x, pos.y) || isSmallScreen) {
+              hold = 0;
+              canvas.off('click');
+              canvas.off('touchstart');
+              canvas.off('mousemove');
               canvas.removeClass('hand');
             }
           })
           .mousemove(function (e) {
-            var offset = canvas.offset(),
-              x,
-              y;
-            x = e.pageX - offset.left;
-            y = e.pageY - offset.top;
-            canvas.toggleClass('hand', seed.hover(x, y));
+            const pos = toLogical(e.pageX, e.pageY);
+            canvas.toggleClass('hand', seed.hover(pos.x, pos.y));
           });
 
         var seedAnimate = eval(
@@ -243,7 +256,12 @@
             foot.draw();
             tree.snapshot('p2', 500, 0, 610, 680);
 
-            canvas.parent().css('background', 'url(' + tree.toDataURL('image/png') + ')');
+            canvas.parent().css({
+              backgroundImage: 'url(' + tree.toDataURL('image/png') + ')',
+              backgroundSize: '100% 100%',
+              backgroundRepeat: 'no-repeat',
+              backgroundPosition: 'center',
+            });
             canvas.css('background', '#ffe');
             $await(Jscex.Async.sleep(300));
             canvas.css('background', 'none');
@@ -286,6 +304,8 @@
             $await(growAnimate());
             $await(flowAnimate());
             $await(moveAnimate());
+
+            allowExit = true;
 
             textAnimate().start();
 

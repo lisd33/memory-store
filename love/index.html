@@ -20,18 +20,7 @@
              <div id="wrap">
                 <div id="text">
                     <div id="code"> <font color="#FF0000"> <span class="say">亲爱的宝宝，我爱你</span><br>
-                      <span class="say"> 我知道我不会甜言蜜语，</span><br>
-                      <span class="say"> 但是我会用行动证明一切</span><br>
-                      <span class="say">你说我啰嗦，</span><br>             
-                          <span class="say"> 有些东西因为越在乎所以越怕失去</span><br>
-                      <span class="say">因为我太爱你了，所以我害怕失去你</span><br>
-                      <span class="say">因为我太爱你了，所以我对你总啰嗦</span><br>
-                      <span class="say">希望可以执子之手，与子偕老</span><br>
-                      <span class="say">如果上天让我许三个愿望，</span><br>
-                              <span class="say">第一个是今生今世和你在一起， </span><br>
-                           <span class="say"> 第二个是再生再世和你在一起，</span><br>
-                           <span class="say">第三个是永生永世和你不分离 </span><br>
-                      <span class="say"><span class="space"></span> -- 爱你的老公</span> </font>
+                     
                           <br />
                           <br />
                       </p>
@@ -58,18 +47,38 @@
             $("#error").show();
             return false;        }
 
-        // 固定画布逻辑分辨率 1100x680，CSS 缩放以自适应，确保点击坐标与绘制一致
+        // 固定画布逻辑分辨率 1100x680，按视口宽高等比缩放，确保点击坐标与绘制一致
         var logicW = 1100, logicH = 680;
-        var targetW = logicW;
         var viewportW = $(window).width();
-        if (viewportW < logicW - 16) {
-            targetW = viewportW - 16; // 留少量边距
-        }
-        var targetH = Math.round(targetW * (logicH / logicW));
+        var viewportH = $(window).height();
+        var scale = Math.min((viewportW - 16) / logicW, (viewportH - 16) / logicH, 1);
+        if (scale < 0.2) scale = 0.2; // 保底，避免过小
+        var targetW = Math.round(logicW * scale);
+        var targetH = Math.round(logicH * scale);
         canvas.css({ width: targetW + "px", height: targetH + "px" });
         $("#wrap").css({ width: targetW + "px", height: targetH + "px" });
         canvas.attr("width", logicW);
         canvas.attr("height", logicH);
+        const overlayScale = Math.max(targetW / logicW, 0.6);
+        const fontScale = Math.min(Math.max(overlayScale, 1) * 0.95, 1.3); // 继续缩小字体
+        const textBase = { left: 188, top: 80, clockLeft: 60, clockTop: 550, codeSize: 16, clockSize: 28, digitSize: 64 };
+        $('#text').css({
+            left: textBase.left * overlayScale + 'px',
+            top: textBase.top * overlayScale + 'px',
+            transform: 'none',
+            transformOrigin: 'top left',
+        });
+        $('#code').css('font-size', textBase.codeSize * fontScale + 'px');
+        $('#clock-box').css({
+            left: textBase.clockLeft * overlayScale + 'px',
+            top: textBase.clockTop * overlayScale + 'px',
+            transform: 'none',
+            transformOrigin: 'top left',
+            'font-size': textBase.clockSize * fontScale + 'px',
+        });
+        $('#clock .digit').css('font-size', textBase.digitSize * fontScale + 'px');
+        var width = logicW;
+        var height = logicH;
         var opts = {
             seed: {
                 x: width / 2 - 20,
@@ -110,9 +119,19 @@
         var seed = tree.seed;
         var foot = tree.footer;
         var hold = 1;
+        var allowExit = false;
 
+        // 点击任意处（含移动端触摸）通知父页面关闭开场动画
+        $(window).on("click touchstart", function () {
+            if (!allowExit) return;
+            if (window.parent) {
+                window.parent.postMessage({ type: "LOVE_INTRO_EXIT" }, "*");
+            }
+        });
+
+        const isSmallScreen = window.matchMedia('(max-width: 640px)').matches;
         const activate = function (x, y) {
-            if (seed.hover(x, y)) {
+            if (seed.hover(x, y) || isSmallScreen) {
                 hold = 0;
                 canvas.off("click");
                 canvas.off("touchstart");
@@ -121,23 +140,27 @@
             }
         };
 
+        // 将事件坐标从 CSS 尺寸换算到 canvas 逻辑坐标，防止缩放后命中区域错位
+        const toLogical = (clientX, clientY) => {
+            const rect = canvas[0].getBoundingClientRect();
+            const cssX = clientX - rect.left;
+            const cssY = clientY - rect.top;
+            const scaleX = canvas[0].width / rect.width;
+            const scaleY = canvas[0].height / rect.height;
+            return { x: cssX * scaleX, y: cssY * scaleY };
+        };
+
         canvas.click(function(e) {
-            var offset = canvas.offset(), x, y;
-            x = e.pageX - offset.left;
-            y = e.pageY - offset.top;
-            activate(x, y);
+            const pos = toLogical(e.pageX, e.pageY);
+            activate(pos.x, pos.y);
         }).on("touchstart", function(e) {
             var touch = e.originalEvent.touches[0];
             if (!touch) return;
-            var offset = canvas.offset(), x, y;
-            x = touch.pageX - offset.left;
-            y = touch.pageY - offset.top;
-            activate(x, y);
+            const pos = toLogical(touch.pageX, touch.pageY);
+            activate(pos.x, pos.y);
         }).mousemove(function(e){
-            var offset = canvas.offset(), x, y;
-            x = e.pageX - offset.left;
-            y = e.pageY - offset.top;
-            canvas.toggleClass('hand', seed.hover(x, y));
+            const pos = toLogical(e.pageX, e.pageY);
+            canvas.toggleClass('hand', seed.hover(pos.x, pos.y));
         });
 
         var seedAnimate = eval(Jscex.compile("async", function () {
@@ -180,7 +203,12 @@
             tree.snapshot("p2", 500, 0, 610, 680);
 
             // 会有闪烁不得意这样做, (＞﹏＜)
-            canvas.parent().css("background", "url(" + tree.toDataURL('image/png') + ")");
+            canvas.parent().css({
+                backgroundImage: "url(" + tree.toDataURL('image/png') + ")",
+                backgroundSize: "100% 100%",
+                backgroundRepeat: "no-repeat",
+                backgroundPosition: "center",
+            });
             canvas.css("background", "#ffe");
             $await(Jscex.Async.sleep(300));
             canvas.css("background", "none");
@@ -217,6 +245,8 @@
             $await(growAnimate());
             $await(flowAnimate());
             $await(moveAnimate());
+
+            allowExit = true;
 
             textAnimate().start();
 

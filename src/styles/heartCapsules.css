@@ -73,12 +73,12 @@
 
 .capsule-fallback-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(clamp(140px, 50vw, 200px), 1fr));
   gap: 10px;
 }
 
 .capsule-fallback-grid.large {
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(clamp(160px, 48vw, 220px), 1fr));
 }
 
 .capsule-fallback {

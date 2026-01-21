@@ -1,4 +1,4 @@
-import { useMemo, useState, useTransition } from 'react';
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import './App.css';
 import './styles/heartCapsules.css';
 import { bucketList as initialBucket, timeline as initialTimeline } from './data/memories.js';
@@ -7,6 +7,7 @@ import CapsuleDetail from './components/CapsuleDetail.jsx';
 import ShatteredHeart from './components/ShatteredHeart.tsx';
 import LoveIntro from './components/LoveIntro.jsx';
 import useIsMobile from './hooks/useIsMobile.js';
+import { createCapsule, fetchState, updateBucket, updateCapsule, updateNote } from './api/client.js';
 
 function App() {
   const [note, setNote] = useState(
@@ -28,6 +29,39 @@ function App() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [showIndex, setShowIndex] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [syncingNote, setSyncingNote] = useState(false);
+  const noteTimerRef = useRef(null);
+  const noteHydratedRef = useRef(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchState()
+      .then((data) => {
+        if (cancelled) return;
+        setBucket(data.bucket || initialBucket);
+        setCapsules(data.capsules || initialTimeline);
+        if (data.note) setNote(data.note);
+        noteHydratedRef.current = true;
+      })
+      .catch(() => {
+        noteHydratedRef.current = true;
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!noteHydratedRef.current) return;
+    if (noteTimerRef.current) clearTimeout(noteTimerRef.current);
+    noteTimerRef.current = setTimeout(() => {
+      setSyncingNote(true);
+      updateNote(note).catch(() => {}).finally(() => setSyncingNote(false));
+    }, 500);
+    return () => {
+      if (noteTimerRef.current) clearTimeout(noteTimerRef.current);
+    };
+  }, [note]);
 
   const memoriesCount = useMemo(() => capsules.length, [capsules.length]);
   const readyCount = useMemo(
@@ -52,6 +86,10 @@ function App() {
         ),
       );
     });
+    updateBucket(id, {
+      status:
+        bucket.find((item) => item.id === id)?.status === 'ready' ? 'draft' : 'ready',
+    }).catch(() => {});
   };
 
   const openCapsule = (capsule) => {
@@ -67,6 +105,7 @@ function App() {
         items.map((item) => (item.id === editingCapsule.id ? { ...item, ...editingCapsule } : item)),
       );
     });
+    updateCapsule(editingCapsule.id, editingCapsule).catch(() => {});
     closeCapsule();
   };
 
@@ -118,6 +157,7 @@ function App() {
     startTransition(() => {
       setCapsules((prev) => [...prev, capsule]);
     });
+    createCapsule(capsule).catch(() => {});
     setNewCapsule({
       title: '',
       date: '',
@@ -185,6 +225,19 @@ function App() {
                 <h2>轻量列表 · 点击可编辑</h2>
               </div>
               <div className="pill">{capsules.length} 条碎片</div>
+            </div>
+            <div className="heart-mobile-preview">
+              <ShatteredHeart
+                items={capsules}
+                onClick={openCapsule}
+                seed={66}
+                maxPieces={120}
+                showFallingShards={false}
+                bevelStrength={0.8}
+                showIndices
+                className="shattered-slot show-mobile-heart"
+                forceShowHeart
+              />
             </div>
             <div className="capsule-fallback-grid">
               {capsules.map((item, index) => (

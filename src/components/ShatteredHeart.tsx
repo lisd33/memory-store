@@ -23,6 +23,7 @@ type Props = {
   fallingCount?: number;
   bevelStrength?: number; // 0..1
   showIndices?: boolean;
+  forceShowHeart?: boolean;
 };
 
 const HEART_OUTLINE_D =
@@ -100,6 +101,7 @@ export function ShatteredHeart({
   fallingCount = 10,
   bevelStrength = 0.75,
   showIndices = true,
+  forceShowHeart = false,
 }: Props) {
   const { ref, w, h } = useElementSize<HTMLDivElement>();
   const isMobile = useIsMobile();
@@ -194,7 +196,7 @@ export function ShatteredHeart({
   const seamDark = 'rgba(0,0,0,0.32)';
   const seamLight = 'rgba(255,255,255,0.18)';
 
-  const showHeart = !isMobile && pieces.length > 0;
+  const showHeart = (forceShowHeart || !isMobile) && pieces.length > 0;
   const fallbackGrid = (
     <div className="capsule-fallback-grid">
       {normalizedItems.slice(0, 12).map((item) => (

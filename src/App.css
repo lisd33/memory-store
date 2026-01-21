@@ -731,10 +731,35 @@ textarea:focus-visible {
   }
 
   .capsule-fallback-grid {
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(clamp(120px, 55vw, 160px), 1fr));
+    gap: 8px;
   }
 
   .capsule-cover {
     border-radius: 10px;
   }
+}
+
+@media (max-width: 320px) {
+  .capsule-fallback-grid {
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 8px;
+  }
+}
+
+/* Prevent accidental horizontal scroll on narrow devices */
+body {
+  overflow-x: hidden;
+}
+
+#root {
+  overflow-x: hidden;
+}
+
+.shell {
+  overflow-x: hidden;
+}
+
+.heart-mobile-preview {
+  margin: 8px 0 14px;
 }

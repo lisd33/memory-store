@@ -8,7 +8,10 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "api": "node api/server.js",
+    "start": "node api/server.js",
+    "serve": "npm run build && node api/server.js"
   },
   "dependencies": {
     "d3-delaunay": "^6.0.4",

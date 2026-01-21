@@ -179,9 +179,18 @@
             ctx.clearRect(point.x - w, point.y - h, 4 * w, 4 * h);
         },
         hover: function(x, y) {
+            // 放宽命中：先按几何半径判断，再 fallback 到像素命中
+            var center = this.cirle.point;
+            var radius = (this.cirle.radius || 5) * (this.cirle.scale || 1);
+            var tol = 36; // 额外可点击半径，便于小屏触控
+            var dx = x - center.x;
+            var dy = y - center.y;
+            if (Math.hypot(dx, dy) <= radius + tol) {
+                return true;
+            }
             var ctx = this.tree.ctx;
             var pixel = ctx.getImageData(x, y, 1, 1);
-            return pixel.data[3] == 255
+            return pixel.data[3] === 255;
         }
     }
 

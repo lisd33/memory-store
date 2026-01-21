@@ -57,3 +57,7 @@
     display: none;
   }
 }
+
+.show-mobile-heart .shattered-svg {
+  display: block !important;
+}
